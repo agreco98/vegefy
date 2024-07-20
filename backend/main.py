@@ -1,10 +1,11 @@
 from fastapi import FastAPI
 from infrastructure import application
 from routers import prediction
+from presentation import auth_routes
 
 
 app: FastAPI = application.create(
-    rest_routers=[prediction.router],
+    rest_routers=[prediction.router, auth_routes.router],
     startup_tasks=[],
     shutdown_tasks=[],
 )
