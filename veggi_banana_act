@@ -1,0 +1,22 @@
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.models import load_model
+import numpy as np
+
+# Load the model
+model = load_model('banana_recognition_model.h5')
+
+# Load class labels
+class_labels = np.load('class_labels.npy', allow_pickle=True)
+
+# Load an image for prediction
+img_path = r'C:\Users\DBoran01\OneDrive - Kenvue\Pictures\Screenshots\Screenshot 2024-07-21 155656.png'
+img = image.load_img(img_path, target_size=(100, 100))
+img_array = image.img_to_array(img)
+img_array = np.expand_dims(img_array, axis=0) / 255.0
+
+# Make prediction
+predictions = model.predict(img_array)
+predicted_class = np.argmax(predictions)
+predicted_label = class_labels[predicted_class]
+
+print(f'Predicted banana type: {predicted_label}')
