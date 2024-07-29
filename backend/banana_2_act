@@ -1,0 +1,19 @@
+from tensorflow.keras.preprocessing import image
+import numpy as np
+
+# Load the model
+model = tensorflow.keras.models.load_model('apple_recognition_model.h5')
+
+# Load an image for prediction
+img_path = ''
+img = image.load_img(img_path, target_size=(100, 100))
+img_array = image.img_to_array(img)
+img_array = np.expand_dims(img_array, axis=0) / 255.0
+
+# Make prediction
+predictions = model.predict(img_array)
+predicted_class = np.argmax(predictions)
+class_labels = list(train_generator.class_indices.keys())
+predicted_label = class_labels[predicted_class]
+
+print(f'Predicted apple type: {predicted_label}')
