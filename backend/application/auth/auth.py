@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordBearer
 from fastapi import HTTPException, status, Depends
 
 
-from infrastructure.auth import create_access_token, create_refresh_token, verify_refresh_token, verify_access_token
+from infrastructure.auth import create_access_token, create_refresh_token, verify_refresh_token, verify_access_token, verify_password
 from config import settings
 from domain.users import UserDB, User
 
@@ -14,6 +14,7 @@ __all__ = (
     "login",
     "refresh_access_token",
     "search_user_db",
+    "users_db",
 )
 
 oauth2 = OAuth2PasswordBearer(tokenUrl="login")
@@ -21,6 +22,7 @@ oauth2 = OAuth2PasswordBearer(tokenUrl="login")
 
 users_db = {
     "agredev": {
+        "id": 1,
         "username": "agredev",
         "full_name": "Ariel Greco",
         "email": "fgwrf@gmail.com",
@@ -28,6 +30,7 @@ users_db = {
         "password": "$2a$12$JjM8uLfKWavuKGzYzkO9cO/nZpDEwAP5F9zpRtFxGlSjzQfHn.9v6"
     },
     "agredev2": {
+        "id": 2,
         "username": "agredev2",
         "full_name": "Ariel Greco 2",
         "email": "fgwrf2@gmail.com",
@@ -62,11 +65,7 @@ def authenticate_user(token: str = Depends(oauth2)) -> UserDB:
     if username is None:
         raise credentials_exception
     
-    user = search_user_db(username)
-    if user is None:
-        raise credentials_exception
-    
-    return user
+    return search_user_db(username)
 
 
 def login(username: str, password: str) -> Optional[dict]:
@@ -74,7 +73,8 @@ def login(username: str, password: str) -> Optional[dict]:
     if not user:
         return None
     
-    # TODO: verify with the password hashed
+    if not verify_password(password, user.password):
+        return None
 
     access_token_expires = timedelta(seconds=settings.access_token.ttl)
     refresh_token_expires = timedelta(seconds=settings.refresh_token.ttl)

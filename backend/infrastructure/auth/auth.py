@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import jwt
 from jwt.exceptions import PyJWTError
 from typing import Optional
+from passlib.context import CryptContext
 
 from config import settings
 
@@ -11,7 +12,12 @@ __all__ = (
     "create_refresh_token", 
     "verify_access_token", 
     "verify_refresh_token",
+    "verify_password",
+    "hash_password",
 )
+
+
+crypt = CryptContext(schemes=["bcrypt"])
     
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -50,3 +56,11 @@ def verify_access_token(token: str) -> Optional[dict]:
 
 def verify_refresh_token(token: str) -> Optional[dict]:
     return verify_token(token, settings.refresh_token.secret_key)
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return crypt.verify(plain_password, hashed_password)
+
+
+def hash_password(password: str) -> str:
+    return crypt.encrypt(password)
