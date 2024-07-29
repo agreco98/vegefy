@@ -25,10 +25,10 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(seconds=settings.access_token.ttl)
+        expire = datetime.utcnow() + timedelta(seconds=settings.authentication.access_token.ttl)
     
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, settings.access_token.secret_key, settings.algorithm)
+    return jwt.encode(to_encode, settings.authentication.access_token.secret_key, settings.authentication.algorithm)
 
 
 def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -36,26 +36,26 @@ def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) 
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(seconds=settings.refresh_token.ttl)
+        expire = datetime.utcnow() + timedelta(seconds=settings.authentication.refresh_token.ttl)
     
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, settings.refresh_token.secret_key, settings.algorithm)
+    return jwt.encode(to_encode, settings.authentication.refresh_token.secret_key, settings.authentication.algorithm)
 
 
 def verify_token(token: str, secret_key: str) -> Optional[dict]:
     try:
-        payload = jwt.decode(token, secret_key, settings.algorithm)
+        payload = jwt.decode(token, secret_key, settings.authentication.algorithm)
         return payload
     except PyJWTError:
         return None
     
 
 def verify_access_token(token: str) -> Optional[dict]:
-    return verify_token(token, settings.access_token.secret_key)
+    return verify_token(token, settings.authentication.access_token.secret_key)
 
 
 def verify_refresh_token(token: str) -> Optional[dict]:
-    return verify_token(token, settings.refresh_token.secret_key)
+    return verify_token(token, settings.authentication.refresh_token.secret_key)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:

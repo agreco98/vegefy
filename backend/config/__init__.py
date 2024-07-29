@@ -1,4 +1,5 @@
 from pydantic import  BaseModel
+from pydantic_settings import BaseSettings
 
 
 class AccessTokenSettings(BaseModel):
@@ -18,4 +19,14 @@ class AuthenticationSettings(BaseModel):
     scheme: str = "Bearer"
 
 
-settings = AuthenticationSettings()
+class DataBaseSettings(BaseModel):
+    mongo_url: str = "mongodb://localhost:27017"
+    mongo_db_name: str = "database"
+
+
+class Settings(BaseSettings):
+    authentication: AuthenticationSettings = AuthenticationSettings()
+    database: DataBaseSettings = DataBaseSettings()
+
+
+settings = Settings()

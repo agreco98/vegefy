@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 
-from application.auth import login, refresh_access_token, search_user_db
+from application.auth import login, refresh_access_token
 from domain.auth_schemas import AccessToken, RefreshToken, TokenPayload
 from config import settings
 from infrastructure.auth import verify_access_token
@@ -21,7 +21,7 @@ async def login_user(form_data: OAuth2PasswordRequestForm = Depends()):
             headers={"WWW-Authenticate": "Bearer"},
         )
     return {
-        "payload": TokenPayload(sub=form_data.username, exp=str(settings.access_token.ttl)),
+        "payload": TokenPayload(sub=form_data.username, exp=str(settings.authentication.access_token.ttl)),
         "raw_token": tokens["access_token"]
     }
 
@@ -37,6 +37,6 @@ async def refresh_token(refresh_token: str):
         )
     payload = verify_access_token(new_access_token)
     return {
-        "payload": TokenPayload(sub=payload.get("sub"), exp=str(settings.access_token.ttl)),
+        "payload": TokenPayload(sub=payload.get("sub"), exp=str(settings.authentication.access_token.ttl)),
         "raw_token": new_access_token
     }
