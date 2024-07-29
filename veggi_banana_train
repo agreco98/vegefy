@@ -1,0 +1,138 @@
+# STEP 1 
+
+
+
+import os
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+# Define paths to the dataset
+base_dir = 'C:/python_venvs/veggi/Fruit-Images-Dataset-master'
+train_dir = os.path.join(base_dir, 'Training')
+test_dir = os.path.join(base_dir, 'Test')
+
+# List all classes and filter for banana classes
+all_classes = os.listdir(train_dir)
+banana_classes = [cls for cls in all_classes if 'Banana' in cls]
+
+# Print the banana classes
+print("Banana classes found:", banana_classes)
+
+
+
+# STEP 2
+
+
+
+# Define image size and batch size
+image_size = (100, 100)
+batch_size = 32
+
+# Create a custom function to filter only banana classes
+def filter_banana(directory, banana_classes):
+    class_indices = {cls: idx for idx, cls in enumerate(banana_classes)}
+    return directory, class_indices
+
+# Create data generators for training and validation sets
+train_datagen = ImageDataGenerator(
+    rescale=1.0/255.0,
+    rotation_range=20,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    shear_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True,
+    fill_mode='nearest'
+)
+
+test_datagen = ImageDataGenerator(rescale=1.0/255.0)
+
+# Use a flow_from_directory method with class_mode='categorical' to filter banana classes
+train_generator = train_datagen.flow_from_directory(
+    train_dir,
+    target_size=image_size,
+    batch_size=batch_size,
+    class_mode='categorical',
+    classes=banana_classes  # Only include banana classes
+)
+
+test_generator = test_datagen.flow_from_directory(
+    test_dir,
+    target_size=image_size,
+    batch_size=batch_size,
+    class_mode='categorical',
+    classes=banana_classes  # Only include banana classes
+)
+
+
+
+
+# STEP 3 
+
+
+
+from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+
+model = Sequential([
+    Conv2D(32, (3, 3), activation='relu', input_shape=(100, 100, 3)),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation='relu'),
+    MaxPooling2D((2, 2)),
+    Conv2D(128, (3, 3), activation='relu'),
+    MaxPooling2D((2, 2)),
+    Flatten(),
+    Dense(128, activation='relu'),
+    Dropout(0.5),
+    Dense(len(banana_classes), activation='softmax')  # Number of banana classes
+])
+
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+model.summary()
+
+
+
+
+# STEP 4
+
+
+
+history = model.fit(
+    train_generator,
+    steps_per_epoch=train_generator.samples // train_generator.batch_size,
+    validation_data=test_generator,
+    validation_steps=test_generator.samples // test_generator.batch_size,
+    epochs=10
+)
+
+
+
+test_loss, test_accuracy = model.evaluate(test_generator)
+print(f'Test accuracy: {test_accuracy * 100:.2f}%')
+
+
+
+model.save('banana_recognition_model.h5')
+
+
+
+from tensorflow.keras.preprocessing import image
+
+import numpy as np
+
+# Load the model
+model = load_model('banana_recognition_model.h5')
+
+# Load an image for prediction
+img_path = 'C:/Users/DBoran01/Downloads/bananas_test.jpg'
+img = image.load_img(img_path, target_size=(100, 100))
+img_array = image.img_to_array(img)
+img_array = np.expand_dims(img_array, axis=0) / 255.0
+
+# Make prediction
+predictions = model.predict(img_array)
+predicted_class = np.argmax(predictions)
+class_labels = list(train_generator.class_indices.keys())
+predicted_label = class_labels[predicted_class]
+
+print(f'Predicted banana type: {predicted_label}')
