@@ -4,6 +4,6 @@ from typing import Optional
 class Prediction(BaseModel):
     id: Optional[str] | None
     user_id: str
-    response: str
+    response: int
     image: str
     created_at: str

@@ -7,13 +7,13 @@ import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
 
 # Set a custom cache directory for TensorFlow Hub
-os.environ['TFHUB_CACHE_DIR'] = r'C:\python_venvs\veggi\temp_files'
+os.environ['TFHUB_CACHE_DIR'] = r"C:\Users\Milagros\Documents\vegefly_test"
 
 # Load the object detection model from TensorFlow Hub
 detector = hub.load("https://tfhub.dev/tensorflow/ssd_mobilenet_v2/2")
 
 # Load the banana type classification model
-banana_type_model = load_model(r'C:\python_venvs\veggi\banana_recognition_model.h5')
+banana_type_model = load_model(r'C:\Users\Milagros\Documents\Vegefly\backend\banana_recognition_model.h5')
 
 # Load class labels for COCO dataset (common object categories)
 coco_labels = {
@@ -70,7 +70,7 @@ def classify_banana_type(banana_image, model):
     return banana_type_labels[predicted_class]
 
 # Load an image for object detection
-img_path = r'C:\Users\DBoran01\OneDrive - Kenvue\Pictures\Screenshots\Screenshot 2024-07-21 155656.png'
+img_path = r"C:\Users\Milagros\Downloads\apple.jpg"
 img = cv2.imread(img_path)
 img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 img_resized = cv2.resize(img_rgb, (320, 320))  # Resize the image to 320x320
