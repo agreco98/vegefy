@@ -1,1 +1,1 @@
-from domain.users.models import *
+from domain.users.user_model import *

@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
-from typing import Callable, Coroutine, Iterable
+from typing import Callable, Coroutine, Iterable, List, Type
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from fastapi import APIRouter, FastAPI
 
@@ -11,6 +12,7 @@ def create(
     rest_routers: Iterable[APIRouter],
     startup_tasks: Iterable[Callable[[], Coroutine]] | None = None,
     shutdown_tasks: Iterable[Callable[[], Coroutine]] | None = None,
+    middlewares: List[Type[BaseHTTPMiddleware]] = None,
     **kwargs,
 ) -> FastAPI:
 
@@ -18,17 +20,21 @@ def create(
     async def lifespan(app: FastAPI):
 
         # Define startup tasks 
-        [await task() for task in startup_tasks if startup_tasks]
+        [await task(app) for task in startup_tasks if startup_tasks]
     
         yield
         
         # Define shutdown tasks
-        [await task() for task in shutdown_tasks if shutdown_tasks]
+        [await task(app) for task in shutdown_tasks if shutdown_tasks]
 
     # Initialize the FastAPI application
     app = FastAPI(lifespan=lifespan, **kwargs)
 
     # Include routers
     [app.include_router(router) for router in rest_routers]
-        
+
+    # Add middlewares
+    if middlewares:
+        [app.add_middleware(middleware) for middleware in middlewares]
+
     return app

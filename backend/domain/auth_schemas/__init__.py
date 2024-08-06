@@ -1,1 +1,0 @@
-from domain.auth_schemas.auth import *
