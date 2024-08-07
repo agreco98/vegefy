@@ -2,18 +2,22 @@ from typing import List, Optional
 from bson import ObjectId
 from pymongo.database import Database
 from pymongo.collection import Collection
+from gridfs import GridFS
 
 from domain.predictions.prediction_model import Prediction
 from domain.predictions.prediction_schema import prediction_schema
 
 
 class PredictionRepository:
-    def __init__(self, db: Database):
+    def __init__(self, db: Database, fs: Optional[GridFS] = None):
         self.collection: Collection = db.predictions
+        self.fs = fs
 
-    def create(self, prediction: Prediction) -> Prediction:
+    def create(self, prediction: Prediction, image: bytes) -> Prediction:
+        image_id = self.fs.put(image, filename=prediction.image)
 
         prediction_dict = dict(prediction)
+        prediction_dict["image"] = str(image_id)
         del prediction_dict["id"]
 
         id = self.collection.insert_one(prediction_dict).inserted_id
@@ -39,6 +43,9 @@ class PredictionRepository:
     def search_prediction(self, field: str, key) -> Optional[Prediction]:
         prediction = self.collection.find_one({field: key})
         return Prediction(**prediction_schema(prediction)) if prediction else None
+    
+    def get_image(self, image_id: str) -> bytes:
+        return self.fs.get(ObjectId(image_id)).read()
     
     def update(self, prediction: Prediction) -> Prediction:
         prediction_dict = dict(prediction)
