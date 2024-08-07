@@ -1,13 +1,18 @@
-import os
 import tensorflow as tf
 import numpy as np
 import cv2
+from PIL import Image
+import io
+
 
 __all__ = (
     "draw_boxes",
     "non_max_suppression",
     "classify_banana_type",
-    "post_process_detections"
+    "post_process_detections", 
+    "preprocess_image",
+    "filter_banana_detections",
+    "draw_and_classify_bananas",
 )
 
 
@@ -51,3 +56,29 @@ def post_process_detections(boxes, scores, threshold=0.5):
     filtered_boxes = boxes[filtered_indices]
     filtered_scores = scores[filtered_indices]
     return filtered_boxes, filtered_scores
+
+
+def preprocess_image(content: bytes, size: tuple = (320, 320)):
+    img = Image.open(io.BytesIO(content))
+    img_rgb = np.array(img)
+    img_resized = cv2.resize(img_rgb, size)
+    img_tensor = tf.convert_to_tensor(img_resized, dtype=tf.uint8)
+    img_tensor = tf.expand_dims(img_tensor, 0)
+    return img_tensor, img_rgb
+
+
+def filter_banana_detections(boxes, class_ids, scores):
+    banana_boxes = boxes[class_ids == 52]
+    banana_scores = scores[class_ids == 52]
+    return banana_boxes, banana_scores
+
+
+def draw_and_classify_bananas(img_rgb, banana_boxes, model, banana_type_labels):
+    img_with_boxes = img_rgb.copy()
+    for box in banana_boxes:
+        ymin, xmin, ymax, xmax = box
+        ymin, xmin, ymax, xmax = int(ymin * img_rgb.shape[0]), int(xmin * img_rgb.shape[1]), int(ymax * img_rgb.shape[0]), int(xmax * img_rgb.shape[1])
+        banana_image = img_rgb[ymin:ymax, xmin:xmax]
+        banana_type = classify_banana_type(banana_image, model, banana_type_labels)
+        img_with_boxes = draw_boxes(img_rgb, [box], [banana_type], [1.0])
+    return img_with_boxes

@@ -1,14 +1,13 @@
+from fastapi import FastAPI
 from pymongo import MongoClient
-from config import settings
+from gridfs import GridFS
 
-client = None
 
-async def connect_to_mongo():
-    global client
+async def connect_to_mongo(app: FastAPI):
     client = MongoClient()
+    app.state.db = client
+    app.state.fs = GridFS(app.state.db.local)
 
 
-async def close_mongo_connection():
-    global client
-    if client:
-        client.close()
+async def close_mongo_connection(app: FastAPI):
+    app.state.db.close()

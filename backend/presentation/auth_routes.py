@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
+from typing import Collection
 
 
 from application.auth import login, refresh_access_token
-from domain.auth_schemas import AccessToken, RefreshToken, TokenPayload
+from domain.auth import AccessToken, RefreshToken, TokenPayload
 from config import settings
 from infrastructure.auth import verify_access_token
 
@@ -11,9 +12,12 @@ from infrastructure.auth import verify_access_token
 router = APIRouter()
 
 
+def get_database(request: Request) -> Collection:
+    return request.app.state.db
+
 @router.post("/login", response_model=AccessToken)
-async def login_user(form_data: OAuth2PasswordRequestForm = Depends()):
-    tokens = login(form_data.username, form_data.password)
+async def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Collection = Depends(get_database)):
+    tokens = login(form_data.username, form_data.password, db.local)
     if not tokens:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

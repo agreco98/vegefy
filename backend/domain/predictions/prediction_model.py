@@ -7,3 +7,8 @@ class Prediction(BaseModel):
     response: int
     image: str
     created_at: str
+
+
+class PredictionResponse(BaseModel):
+    prediction: Prediction
+    base64: str

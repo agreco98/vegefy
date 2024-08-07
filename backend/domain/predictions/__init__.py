@@ -1,1 +1,1 @@
-from domain.predictions.predictions import *
+from domain.predictions.prediction_model import *
