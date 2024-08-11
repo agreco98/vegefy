@@ -1,1 +1,0 @@
-from application.auth.auth import *

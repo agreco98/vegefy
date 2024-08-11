@@ -21,17 +21,14 @@ class DailyRateLimitMiddleware(BaseHTTPMiddleware):
         path = request.url.path
 
         if path == "/predict":
+            
             token = request.headers.get('Authorization').replace("Bearer ", "")
             payload = verify_access_token(token)
-
-            if payload is None:
-                raise HTTPException(
-                                    status_code=status.HTTP_401_UNAUTHORIZED,
-                                    detail="Could not validate credentials",
-                                    headers={"WWW-Authenticate": "Bearer"},
-                                )
+            if not payload:
+                return JSONResponse(content={"detail": "Invalid or expired token"}, status_code=401)
             
             is_premium = payload.get("premium")
+            
             if is_premium == False:
                 current_time = time.time()
                 timestamps = self.rate_limit_records[client_ip]

@@ -14,3 +14,8 @@ class AccessToken(BaseModel):
 class RefreshToken(BaseModel):
     payload: TokenPayload
     raw_token: str
+
+
+class TokenResponse(BaseModel):
+    access_token: AccessToken
+    refresh_token: RefreshToken

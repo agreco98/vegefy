@@ -2,93 +2,116 @@ from datetime import timedelta
 from typing import Optional, Collection
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import HTTPException, status, Depends, Request
-
+from datetime import datetime, timedelta, timezone
+import jwt
+from jwt.exceptions import PyJWTError, ExpiredSignatureError
+from typing import Optional
+from passlib.context import CryptContext
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from infrastructure.auth import create_access_token, create_refresh_token, verify_refresh_token, verify_access_token, verify_password
 from config import settings
 from domain.users import UserDB, User
 from domain.users.user_schema import user_schema
-import infrastructure.database.client as db
+import domain.auth.auth_model as TokenPayload
 from domain.users.user_repository import UserRepository
-from application.users.user_service import UserService
 
 
-__all__ = (
-    "authenticate_user",
-    "login",
-    "refresh_access_token",
-    "search_user"
-)
+def get_database(request: Request) -> Collection:
+    return request.app.state.db
 
-oauth2 = OAuth2PasswordBearer(tokenUrl="login")
+#oauth2 = OAuth2PasswordBearer(tokenUrl="login")
+crypt = CryptContext(schemes=["bcrypt"])
 
+class AuthService:
 
-
-def search_user_db(field: str, key, db: Collection):
-    try:
-        user = db.users.find_one({field: key})
-        print(user)
-        return UserDB(**user_schema(user))
-    except Exception as e:
-        print(str(e))
-        return {"error": "User was not found"}
-
-
-def search_user(field: str, key, db: Collection):
-    try:
-        user = db.users.find_one({field: key})
-        print(UserDB(**user_schema(user)))
-        return UserDB(**user_schema(user))
-    except:
-        return {"error": "User was not found"}
-
+    @staticmethod
+    def create_access_token(user: dict, expires_delta: Optional[timedelta] = None) -> str:
+        to_encode = user.copy()
+        if expires_delta:
+            expire = datetime.utcnow() + expires_delta
+        else:
+            expire = datetime.utcnow() + timedelta(seconds=settings.authentication.access_token.ttl)
     
-def authenticate_user(token: str = Depends(oauth2)) -> str:
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+        to_encode.update({"exp": expire})
+        return jwt.encode(to_encode, settings.authentication.access_token.secret_key, settings.authentication.algorithm)
 
-    payload = verify_access_token(token)
-    if payload is None:
-        raise credentials_exception
+    @staticmethod
+    def create_refresh_token(user: dict, expires_delta: Optional[timedelta] = None) -> str:
+        to_encode = user.copy()
+        if expires_delta:
+            expire = datetime.utcnow() + expires_delta
+        else:
+            expire = datetime.utcnow() + timedelta(seconds=settings.authentication.refresh_token.ttl)
+
+        to_encode.update({"exp": expire})
+        return jwt.encode(to_encode, settings.authentication.refresh_token.secret_key, settings.authentication.algorithm)
+
+    @staticmethod
+    def verify_refresh_token(token: str) -> Optional[dict]:
+        try:
+            return jwt.decode(token, settings.refresh_token.secret_key, settings.authentication.algorithm)
+        except PyJWTError:
+            return None
+
+    @staticmethod
+    def verify_password(plain_password: str, hashed_password: str) -> bool:
+        return crypt.verify(plain_password, hashed_password)
+
+    @staticmethod
+    def hash_password(password: str) -> str:
+        return crypt.hash(password)
     
-    username: str = payload.get("sub")
-    if username is None:
-        raise credentials_exception
-    
-    return username
+    def create_tokens(self, user: User, access_expires_delta: Optional[timedelta] = None, refresh_expires_delta: Optional[timedelta] = None) -> dict:
+        access_token = self.create_access_token(user, access_expires_delta)
+        refresh_token = self.create_refresh_token(user, refresh_expires_delta)
+        
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer"
+        }
 
 
-def login(username: str, password: str, db: Collection) -> Optional[dict]:
-    user = search_user_db("username", username, db)
-    print(user)
-    if not user:
-        return None
-    print(user)
-    if not verify_password(password, user.password):
-        return None
+class CustomHTTPBearer(HTTPBearer):
+    async def __call__(
+        self, request: Request, db: Collection = Depends(get_database)
+    ) -> Optional[HTTPAuthorizationCredentials]:
+        res = await super().__call__(request)
 
-    access_token_expires = timedelta(seconds=settings.authentication.access_token.ttl)
-    refresh_token_expires = timedelta(seconds=settings.authentication.refresh_token.ttl)
-    access_token_str = create_access_token(data={"sub": user.username, "premium": user.premium}, expires_delta=access_token_expires)
-    refresh_token_str = create_refresh_token(data={"sub": user.username, "premium": user.premium}, expires_delta=refresh_token_expires)
-    return {
-        "access_token": access_token_str,
-        "refresh_token": refresh_token_str,
-        "token_type": "bearer"
-    }
+        try:
+            payload = jwt.decode(
+                res.credentials, 
+                settings.authentication.access_token.secret_key, 
+                settings.authentication.algorithm
+            )
+            
+            user_repository = UserRepository(db.local)
+            user = user_repository.search_user("username", payload["sub"])
+            if not user:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+            #if user.banned:
+             #   raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Banned user")
+        except ExpiredSignatureError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
+        except (PyJWTError) as e:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Could not validate credentials"
+            )
+        else:
+            request.state.user = user
+            return user
 
 
-def refresh_access_token(refresh_token: str) -> Optional[str]:
-    payload = verify_refresh_token(refresh_token)
-    if not payload:
-        return None
-    
-    username = payload.get("sub")
-    if username is None:
-        return None
-    
-    access_token_expires = timedelta(seconds=settings.authentication.access_token.ttl)
-    return create_access_token(data={"sub": username}, expires_delta=access_token_expires)
+oauth2_scheme = CustomHTTPBearer()
+
+
+async def get_current_user(user: User = Depends(oauth2_scheme)) -> User:
+    return user
+
+
+async def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.disabled:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user

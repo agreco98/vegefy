@@ -34,10 +34,16 @@ class UserRepository:
             return User(**user_schema(user))
         return None
 
+
     def search_user(self, field: str, key) -> Optional[User]:
         user = self.collection.find_one({field: key})
         return User(**user_schema(user)) if user else None
     
+
+    def search_user_db(self, field: str, key) -> Optional[UserDB]:
+        user = self.collection.find_one({field: key})
+        return UserDB(**user_schema(user)) if user else None
+
 
     def update(self, user: UserDB) -> User:
         user_dict = dict(user)

@@ -1,12 +1,14 @@
-from typing import List
+from typing import List, Optional
 from fastapi import HTTPException
 from bson import ObjectId
 from pymongo.database import Database
-from domain.users.user_repository import UserRepository
-from domain.users.user_model import User, UserDB
+from datetime import timedelta
 
-import infrastructure.database.client as db
+from application.auth.auth import AuthService
+from domain.auth.auth_model import AccessToken, RefreshToken
 from domain.users.user_model import User, UserDB
+from domain.users.user_repository import UserRepository
+from config import settings
 
 
 class UserService:
@@ -36,3 +38,34 @@ class UserService:
         if not self.repository.search_user("_id", ObjectId(_id)):
             raise HTTPException(status_code=404, detail="User not found")
         return self.repository.delete(_id)
+    
+
+    def login(self, username: str, password: str) -> Optional[dict]:
+        user_db = self.repository.search_user_db("username", username)
+        if not user_db or not AuthService.verify_password(password, user_db.password):
+            return None
+
+        access_token_expires = timedelta(seconds=settings.authentication.access_token.ttl)
+        refresh_token_expires = timedelta(seconds=settings.authentication.refresh_token.ttl)
+        access_token_str = AuthService.create_access_token({"sub": user_db.username, "premium": user_db.premium}, expires_delta=access_token_expires)
+        refresh_token_str = AuthService.create_refresh_token({"sub": user_db.username, "premium": user_db.premium}, expires_delta=refresh_token_expires)
+        return {
+            "access_token": access_token_str,
+            "refresh_token": refresh_token_str,
+            "token_type": "bearer"
+        }
+
+
+    def refresh_access_token(self, refresh_token: str) -> Optional[str]:
+        payload = AuthService.verify_refresh_token(refresh_token)
+        if not payload:
+            return None
+        
+        username = payload.get("sub")
+        if username is None:
+            return None
+        
+        access_token_expires = timedelta(seconds=settings.authentication.access_token.ttl)
+        user = self.get_user_by_username(username)
+
+        return AuthService.create_access_token(user, access_token_expires)

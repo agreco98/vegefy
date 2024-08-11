@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 
 class AccessTokenSettings(BaseModel):
     secret_key: str = "test"
-    ttl: int = 6000 # seconds 
+    ttl: int = 60000 # seconds 
 
 
 class RefreshTokenSettings(BaseModel):
