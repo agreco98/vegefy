@@ -1,6 +1,6 @@
 from fastapi import APIRouter, UploadFile, File
 
-from infrastructure.globals import DatabaseDependency, ModelsDependency, GridFSDependency, CurrentUser
+from infrastructure.globals import DatabaseDependency, ModelsDependency, GridFSDependency, CurrentUser, PickleDependency
 from application.predictions.prediction_service import PredictionService
 from domain.predictions import Prediction, PredictionResponse
 
@@ -32,12 +32,13 @@ async def predict_image(
     db: DatabaseDependency,
     models: ModelsDependency,
     fs: GridFSDependency,
+    pickle_file: PickleDependency,
     current_user: CurrentUser,
     file: UploadFile = File(...)
     ):
     
     prediction_service = PredictionService(db.local, fs)
-    return await prediction_service.process_and_create(file, current_user.id, models)
+    return await prediction_service.process_and_create(file, current_user.id, models, pickle_file)
 
 
 @router.put("/prediction", response_model=Prediction, status_code=201)
