@@ -1,15 +1,22 @@
-from typing import List, Tuple, Optional
+from typing import List, Optional
 from fastapi import HTTPException, UploadFile
 from bson import ObjectId
 from pymongo.database import Database
-from datetime import datetime
 import base64
 from gridfs import GridFS
+from io import BufferedReader
+from datetime import datetime
 
-import infrastructure.database.client as db
 from domain.predictions.prediction_model import Prediction, PredictionResponse
 from domain.predictions.prediction_repository import PredictionRepository
-from application.ml import post_process_detections, non_max_suppression, classify_banana_type, draw_boxes, preprocess_image, filter_banana_detections, draw_and_classify_bananas
+from application.ml import (post_process_detections, 
+                            non_max_suppression, 
+                            classify_banana_type, 
+                            draw_boxes, 
+                            preprocess_image, 
+                            filter_banana_detections, 
+                            draw_and_classify_bananas
+                            )
 
 
 class PredictionService:
@@ -45,7 +52,7 @@ class PredictionService:
             raise HTTPException(status_code=404, detail="Prediction not found")
         return self.repository.delete(_id)
     
-    async def process_and_create(self, file: UploadFile, user_id: str, models: List) -> Prediction:
+    async def process_and_create(self, file: UploadFile, user_id: str, models: List, pickle_file: BufferedReader) -> Prediction:
         content = await file.read()
 
         # Preprocess the image for the model
@@ -68,10 +75,12 @@ class PredictionService:
         banana_count = len(banana_boxes)
         prediction_result = banana_count
 
+        informative_response = pickle_file.get("banana")
+
         prediction = Prediction(
             id=None,
             user_id=user_id,
-            response=prediction_result, 
+            response=informative_response, 
             image=file.filename,  
             created_at=datetime.now().isoformat()
         )
