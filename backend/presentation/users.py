@@ -5,7 +5,7 @@ from domain.users import User, UserDB
 from infrastructure.globals import DatabaseDependency, CurrentUser
 
 
-router = APIRouter()
+router = APIRouter(tags=["users"])
 
 
 @router.get("/users",  status_code=200, response_model=list[User])

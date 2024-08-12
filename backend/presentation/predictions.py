@@ -5,7 +5,7 @@ from application.predictions.prediction_service import PredictionService
 from domain.predictions import Prediction, PredictionResponse
 
 
-router = APIRouter()
+router = APIRouter(tags=["predictions"])
 
 
 @router.get("/predictions", status_code=200, response_model=list[Prediction])

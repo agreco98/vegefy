@@ -1,11 +1,12 @@
 import time
 from collections import defaultdict, deque
-from fastapi import Request, HTTPException, status
+from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.responses import JSONResponse
 from typing import Dict
+import jwt
 
-from infrastructure.auth.auth import verify_access_token
+from config import settings
 
 
 
@@ -23,7 +24,7 @@ class DailyRateLimitMiddleware(BaseHTTPMiddleware):
         if path == "/predict":
             
             token = request.headers.get('Authorization').replace("Bearer ", "")
-            payload = verify_access_token(token)
+            payload = jwt.decode(token, settings.authentication.access_token.secret_key, settings.authentication.algorithm)
             if not payload:
                 return JSONResponse(content={"detail": "Invalid or expired token"}, status_code=401)
             
