@@ -1,12 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from typing import Collection
 
-
+from infrastructure.globals import DatabaseDependency
 from application.users.user_service import UserService
 from application.auth.auth import AuthService
 from domain.users.user_model import UserDB
-from domain.auth import AccessToken, RefreshToken, TokenPayload, TokenResponse
+from domain.auth import RefreshToken, TokenPayload, TokenResponse
 from config import settings
 from infrastructure.auth import verify_access_token
 
@@ -14,25 +13,36 @@ from infrastructure.auth import verify_access_token
 router = APIRouter()
 
 
-def get_database(request: Request) -> Collection:
-    return request.app.state.db
-
-
 @router.post("/register", response_model=TokenResponse)
 async def register(
     user: UserDB,
-    db: Collection = Depends(get_database)
+    db: DatabaseDependency
 ):
+    plain_password = user.password
     user_service = UserService(db.local)
     new_user = user_service.create(user) 
+
+    tokens = user_service.login(new_user.username, plain_password)
+
+    access_token = {
+        "payload": TokenPayload(sub=new_user.username, exp=str(settings.authentication.access_token.ttl)),
+        "raw_token": tokens["access_token"]
+    }
+    refresh_token = {
+        "payload": TokenPayload(sub=new_user.username, exp=str(settings.authentication.refresh_token.ttl)),
+        "raw_token": tokens["refresh_token"]
+    }
     
-    return AuthService.create_tokens(new_user)
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token
+    }
 
 
 @router.post("/login", response_model=TokenResponse)
 async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Collection = Depends(get_database)
+    db: DatabaseDependency, 
+    form_data: OAuth2PasswordRequestForm = Depends()
 ):
     user_service = UserService(db.local)
     tokens = user_service.login(form_data.username, form_data.password)
@@ -55,7 +65,7 @@ async def login(
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh_token(
     refresh_token: RefreshToken,
-    db: Collection = Depends(get_database)
+    db: DatabaseDependency
 ):
     user_service = UserService(db.local)
     
@@ -64,7 +74,7 @@ async def refresh_token(
 
 
 @router.post("/login_test", response_model=TokenResponse)
-async def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Collection = Depends(get_database)):
+async def login_user(db: DatabaseDependency, form_data: OAuth2PasswordRequestForm = Depends()):
     tokens = login(form_data.username, form_data.password, db.local)
     if not tokens:
         raise HTTPException(
