@@ -1,27 +1,15 @@
-from datetime import timedelta
-from typing import Optional, Collection
-from fastapi.security import OAuth2PasswordBearer
-from fastapi import HTTPException, status, Depends, Request
-from datetime import datetime, timedelta, timezone
-import jwt
-from jwt.exceptions import PyJWTError, ExpiredSignatureError
 from typing import Optional
+from datetime import datetime, timedelta
+import jwt
 from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status
+from fastapi import HTTPException, status, Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from infrastructure.auth import create_access_token, create_refresh_token, verify_refresh_token, verify_access_token, verify_password
 from config import settings
-from domain.users import UserDB, User
-from domain.users.user_schema import user_schema
-import domain.auth.auth_model as TokenPayload
+from domain.users.user_model import User
 from domain.users.user_repository import UserRepository
 
 
-def get_database(request: Request) -> Collection:
-    return request.app.state.db
-
-#oauth2 = OAuth2PasswordBearer(tokenUrl="login")
 crypt = CryptContext(schemes=["bcrypt"])
 
 class AuthService:
@@ -52,7 +40,7 @@ class AuthService:
     def verify_refresh_token(token: str) -> Optional[dict]:
         try:
             return jwt.decode(token, settings.refresh_token.secret_key, settings.authentication.algorithm)
-        except PyJWTError:
+        except jwt.PyJWTError:
             return None
 
     @staticmethod
@@ -76,7 +64,7 @@ class AuthService:
 
 class CustomHTTPBearer(HTTPBearer):
     async def __call__(
-        self, request: Request, db: Collection = Depends(get_database)
+        self, request: Request
     ) -> Optional[HTTPAuthorizationCredentials]:
         res = await super().__call__(request)
 
@@ -87,15 +75,15 @@ class CustomHTTPBearer(HTTPBearer):
                 settings.authentication.algorithm
             )
             
-            user_repository = UserRepository(db.local)
+            user_repository = UserRepository(request.app.state.db.local)
             user = user_repository.search_user("username", payload["sub"])
             if not user:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
             #if user.banned:
              #   raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Banned user")
-        except ExpiredSignatureError:
+        except jwt.ExpiredSignatureError:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
-        except (PyJWTError) as e:
+        except jwt.PyJWTError as e:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Could not validate credentials"
             )
