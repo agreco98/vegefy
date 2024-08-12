@@ -1,3 +1,4 @@
+from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -37,6 +38,7 @@ async def register(
         "access_token": access_token,
         "refresh_token": refresh_token
     }
+
 
 
 @router.post("/login", response_model=TokenResponse)

@@ -42,6 +42,7 @@ class UserRepository:
 
     def search_user_db(self, field: str, key) -> Optional[UserDB]:
         user = self.collection.find_one({field: key})
+        print(user)
         return UserDB(**user_schema(user)) if user else None
 
 

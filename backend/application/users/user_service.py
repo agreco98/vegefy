@@ -42,7 +42,7 @@ class UserService:
 
     def login(self, username: str, password: str) -> Optional[dict]:
         user_db = self.repository.search_user_db("username", username)
-        if not user_db or not AuthService.verify_password(password, user_db.password):
+        if not user_db or not AuthService.verify_password(password, user_db.password): 
             return None
 
         access_token_expires = timedelta(seconds=settings.authentication.access_token.ttl)

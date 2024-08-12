@@ -4,7 +4,7 @@ from gridfs import GridFS
 
 
 async def connect_to_mongo(app: FastAPI):
-    client = MongoClient()
+    client = MongoClient(minPoolSize=1)
     app.state.db = client
     app.state.fs = GridFS(app.state.db.local)
 
