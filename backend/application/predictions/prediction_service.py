@@ -6,10 +6,14 @@ import base64
 from gridfs import GridFS
 from io import BufferedReader
 from datetime import datetime
+from PIL import Image
+import google.generativeai as genai
+from io import BytesIO
 
 from domain.predictions.prediction_model import Prediction, PredictionResponse
 from domain.predictions.prediction_repository import PredictionRepository
-from application.ml import (post_process_detections, 
+from config import settings
+from application.ml.model import (post_process_detections, 
                             non_max_suppression, 
                             classify_banana_type, 
                             draw_boxes, 
@@ -17,6 +21,7 @@ from application.ml import (post_process_detections,
                             filter_banana_detections, 
                             draw_and_classify_bananas
                             )
+from application.ml.gemini import clean_response
 
 
 class PredictionService:
@@ -81,6 +86,41 @@ class PredictionService:
             id=None,
             user_id=user_id,
             response=informative_response, 
+            image=file.filename,  
+            created_at=datetime.now().isoformat()
+        )
+    
+        return self.create(prediction, content)
+    
+    
+    async def send_image_and_create_prediction(self, file: UploadFile, user_id: str, pickle_file: BufferedReader) -> Prediction:
+        content = await file.read()
+        img = Image.open(BytesIO(content))
+
+        genai.configure(api_key=settings.gemini.api_key)
+
+        prompt = """
+                    Analyze the image and provide the following information in JSON format:
+                    {
+                    "category": "fruit or vegetable or none",
+                    "type": "the type of fruit or vegetable",
+                    "quantity": "the number of items visible",
+                    "shelf_life_days": "the estimated number of days the item is still consumable"
+                    }
+                    """
+
+        model = genai.GenerativeModel('gemini-1.5-flash')
+
+        response = model.generate_content([prompt, img])
+        response_dict = clean_response(response.text)
+
+        informative_response = pickle_file.get(response_dict["type"])
+
+        prediction = Prediction(
+            id=None,
+            user_id=user_id,
+            response=informative_response, 
+            gemini_response=response_dict,
             image=file.filename,  
             created_at=datetime.now().isoformat()
         )

@@ -6,6 +6,7 @@ def prediction_schema(prediction) -> dict:
     return {"id": str(prediction["_id"]),
             "user_id": prediction["user_id"],
             "response": prediction["response"],
+            "gemini_response": prediction["gemini_response"],
             "image": prediction["image"],
             "created_at": prediction["created_at"]
     }

@@ -30,7 +30,6 @@ async def prediction(_id: str, db: DatabaseDependency, fs: GridFSDependency, cur
 @router.post("/predict", response_model=Prediction, status_code=201)
 async def predict_image(
     db: DatabaseDependency,
-    models: ModelsDependency,
     fs: GridFSDependency,
     pickle_file: PickleDependency,
     current_user: CurrentUser,
@@ -38,7 +37,7 @@ async def predict_image(
     ):
     
     prediction_service = PredictionService(db.local, fs)
-    return await prediction_service.process_and_create(file, current_user.id, models, pickle_file)
+    return await prediction_service.send_image_and_create_prediction(file, current_user.id, pickle_file)
 
 
 @router.put("/prediction", response_model=Prediction, status_code=201)

@@ -5,6 +5,7 @@ class Prediction(BaseModel):
     id: Optional[str] | None
     user_id: str
     response: dict
+    gemini_response: dict
     image: str
     created_at: str
 

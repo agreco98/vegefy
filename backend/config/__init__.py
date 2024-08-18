@@ -1,5 +1,10 @@
 from pydantic import  BaseModel
 from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
+import os
+
+
+load_dotenv()
 
 
 class AccessTokenSettings(BaseModel):
@@ -23,10 +28,14 @@ class DataBaseSettings(BaseModel):
     mongo_url: str = "mongodb://localhost:27017"
     mongo_db_name: str = "database"
 
+class GeminiSettings(BaseSettings):
+    api_key: str = os.getenv("API_KEY")
+
 
 class Settings(BaseSettings):
     authentication: AuthenticationSettings = AuthenticationSettings()
     database: DataBaseSettings = DataBaseSettings()
+    gemini: GeminiSettings = GeminiSettings()
 
 
 settings = Settings()
