@@ -1,6 +1,5 @@
 def user_schema(user) -> dict:
     return {"id": str(user["_id"]),
-            "username": user["username"],
             "fullname": user["fullname"],
             "email": user["email"],
             "disabled": user["disabled"],

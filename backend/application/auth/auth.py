@@ -76,7 +76,7 @@ class CustomHTTPBearer(HTTPBearer):
             )
             
             user_repository = UserRepository(request.app.state.db.local)
-            user = user_repository.search_user("username", payload["sub"])
+            user = user_repository.search_user("email", payload["sub"])
             if not user:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
             #if user.banned:

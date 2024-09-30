@@ -8,12 +8,12 @@ load_dotenv()
 
 
 class AccessTokenSettings(BaseModel):
-    secret_key: str = "test"
+    secret_key: str = os.getenv("SECRET_KEY")
     ttl: int = 60000 # seconds 
 
 
 class RefreshTokenSettings(BaseModel):
-    secret_key: str = "test"
+    secret_key: str = os.getenv("SECRET_KEY")
     ttl: int = 604800 # seconds 
 
 
@@ -25,8 +25,8 @@ class AuthenticationSettings(BaseModel):
 
 
 class DataBaseSettings(BaseModel):
-    mongo_url: str = "mongodb://localhost:27017"
-    mongo_db_name: str = "database"
+    mongo_url: str = os.getenv("DB_KEY")
+    mongo_db_name: str = os.getenv("DB_NAME")
 
 class GeminiSettings(BaseSettings):
     api_key: str = os.getenv("API_KEY")

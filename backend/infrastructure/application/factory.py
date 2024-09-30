@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from typing import Callable, Coroutine, Iterable, List, Type
 from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 
 from fastapi import APIRouter, FastAPI
 
@@ -32,6 +33,14 @@ def create(
 
     # Include routers
     [app.include_router(router) for router in rest_routers]
+
+    app.add_middleware(
+        CORSMiddleware, 
+        allow_origins=["*"], 
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"]
+        )
 
     # Add middlewares
     if middlewares:

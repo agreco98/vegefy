@@ -26,8 +26,8 @@ class UserService:
     def get_user_by_id(self, _id: str) -> User:
         return self.repository.search_user("_id", ObjectId(_id))
     
-    def get_user_by_username(self, username: str) -> User:
-        return self.repository.search_user("username", username)
+    def get_user_by_email(self, email: str) -> User:
+        return self.repository.search_user("email", email)
 
     def update(self, user: UserDB) -> User:
         if not self.repository.search_user("_id", ObjectId(user.id)):
@@ -39,33 +39,31 @@ class UserService:
             raise HTTPException(status_code=404, detail="User not found")
         return self.repository.delete(_id)
     
-
-    def login(self, username: str, password: str) -> Optional[dict]:
-        user_db = self.repository.search_user_db("username", username)
+    def login(self, email: str, password: str) -> Optional[dict]:
+        user_db = self.repository.search_user_db("email", email)
         if not user_db or not AuthService.verify_password(password, user_db.password): 
             return None
 
         access_token_expires = timedelta(seconds=settings.authentication.access_token.ttl)
         refresh_token_expires = timedelta(seconds=settings.authentication.refresh_token.ttl)
-        access_token_str = AuthService.create_access_token({"sub": user_db.username, "premium": user_db.premium}, expires_delta=access_token_expires)
-        refresh_token_str = AuthService.create_refresh_token({"sub": user_db.username, "premium": user_db.premium}, expires_delta=refresh_token_expires)
+        access_token_str = AuthService.create_access_token({"sub": user_db.email, "premium": user_db.premium}, expires_delta=access_token_expires)
+        refresh_token_str = AuthService.create_refresh_token({"sub": user_db.email, "premium": user_db.premium}, expires_delta=refresh_token_expires)
         return {
             "access_token": access_token_str,
             "refresh_token": refresh_token_str,
             "token_type": "bearer"
         }
 
-
     def refresh_access_token(self, refresh_token: str) -> Optional[str]:
         payload = AuthService.verify_refresh_token(refresh_token)
         if not payload:
             return None
         
-        username = payload.get("sub")
-        if username is None:
+        email = payload.get("sub")
+        if email is None:
             return None
         
         access_token_expires = timedelta(seconds=settings.authentication.access_token.ttl)
-        user = self.get_user_by_username(username)
+        user = self.get_user_by_email(email)
 
         return AuthService.create_access_token(user, access_token_expires)

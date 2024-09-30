@@ -20,17 +20,17 @@ async def register(
     db: DatabaseDependency
 ):
     plain_password = user.password
-    user_service = UserService(db.local)
+    user_service = UserService(db)
     new_user = user_service.create(user) 
 
-    tokens = user_service.login(new_user.username, plain_password)
+    tokens = user_service.login(new_user.email, plain_password)
 
     access_token = {
-        "payload": TokenPayload(sub=new_user.username, exp=str(settings.authentication.access_token.ttl)),
+        "payload": TokenPayload(sub=new_user.email, exp=str(settings.authentication.access_token.ttl)),
         "raw_token": tokens["access_token"]
     }
     refresh_token = {
-        "payload": TokenPayload(sub=new_user.username, exp=str(settings.authentication.refresh_token.ttl)),
+        "payload": TokenPayload(sub=new_user.email, exp=str(settings.authentication.refresh_token.ttl)),
         "raw_token": tokens["refresh_token"]
     }
     
@@ -46,15 +46,15 @@ async def login(
     db: DatabaseDependency, 
     form_data: OAuth2PasswordRequestForm = Depends()
 ):
-    user_service = UserService(db.local)
-    tokens = user_service.login(form_data.username, form_data.password)
+    user_service = UserService(db)
+    tokens = user_service.login(form_data.email, form_data.password)
 
     access_token = {
-        "payload": TokenPayload(sub=form_data.username, exp=str(settings.authentication.access_token.ttl)),
+        "payload": TokenPayload(sub=form_data.email, exp=str(settings.authentication.access_token.ttl)),
         "raw_token": tokens["access_token"]
     }
     refresh_token = {
-        "payload": TokenPayload(sub=form_data.username, exp=str(settings.authentication.refresh_token.ttl)),
+        "payload": TokenPayload(sub=form_data.email, exp=str(settings.authentication.refresh_token.ttl)),
         "raw_token": tokens["refresh_token"]
     }
     
@@ -69,6 +69,6 @@ async def refresh_token(
     refresh_token: RefreshToken,
     db: DatabaseDependency
 ):
-    user_service = UserService(db.local)
+    user_service = UserService(db)
     
     return user_service.refresh_access_token(refresh_token)
